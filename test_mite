@@ -2,8 +2,6 @@
 
 BIN="$(basename $0)_binary"
 
-echo "$BIN"
-
 gcc -s -O2 -Wall -Wextra -o "$BIN" mite.c test_1.c test_2.c && "./$BIN"
 ret=$?
 rm -f "$BIN"
