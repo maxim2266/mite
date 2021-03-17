@@ -21,8 +21,8 @@ TEST_CASE(my_test_case)
 }
 ```
 
-Every binary compiled with this framework also has command line parameters:
-```sh
+Every binary compiled with this framework also accepts command line options:
+```
 ▶ test_mite_binary --help
 Usage: test_mite_binary [OPTION]...
 
