@@ -2,7 +2,7 @@
 
 BIN="$(basename $0)_binary"
 
-gcc -s -O2 -Wall -Wextra -o "$BIN" mite.c test_1.c test_2.c && "./$BIN"
+gcc -s -O2 -Wall -Wextra -o "$BIN" mite.c test_1.c test_2.c && "./$BIN" "$@"
 ret=$?
 rm -f "$BIN"
 exit $ret

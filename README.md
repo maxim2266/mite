@@ -21,5 +21,17 @@ TEST_CASE(my_test_case)
 }
 ```
 
+Every binary compiled with this framework also has command line parameters:
+```sh
+▶ test_mite_binary --help
+Usage: test_mite_binary [OPTION]...
+
+Options:
+  -a, --all              do not stop at the first failed test
+  -f, --filter PATTERN   run only the tests matching the given
+                         regular expression PATTERN
+  -h, --help             show this message and exit
+```
+
 #### Status
 Tested on Linux Mint 20.1.

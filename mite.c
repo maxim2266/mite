@@ -33,13 +33,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "mite.h"
 
 #include <time.h>
+#include <string.h>
+#include <sys/types.h>
+#include <regex.h>
 
 static _test_rec *first = NULL, *last = NULL;
-static unsigned count = 0;
 
 void _register_test(_test_rec* rec)
 {
-	++count;
 	rec->next = NULL;
 
 	if(!first)
@@ -58,19 +59,140 @@ void flush_out(void)
 	}
 }
 
-int main(void)
+// termination fucntions
+static unsigned num_failures = 0;
+
+static void do_exit(void) 		{ exit(1); }
+static void do_nothing(void)	{ ++num_failures; }
+
+void (*_failed)(void) = do_exit;
+
+// show usage string
+static __attribute__((noreturn))
+void usage_exit(const char* prog_name)
 {
+	const char* const s = strrchr(prog_name, '/');
+
+	if(s)
+		prog_name = s + 1;
+
+	fprintf(stderr,
+			"Usage: %s [OPTION]...\n\n"
+			"Options:\n"
+			"  -a, --all              do not stop at the first failed test\n"
+			"  -f, --filter PATTERN   run only the tests matching the given\n"
+			"                         regular expression PATTERN\n"
+			"  -h, --help             show this message and exit\n",
+		    prog_name);
+	exit(2);
+}
+
+// filter test cases
+static int all_pass(const _test_rec* const rec __attribute__((unused)))	{ return 1; }
+
+static int (*accept_case)(const _test_rec* const) = all_pass;
+
+// regex
+static regex_t regex;
+
+static
+void free_regex(void)
+{
+	regfree(&regex);
+}
+
+static __attribute__((noreturn))
+void exit_with_regex_error(int err)
+{
+	char buff[4096];
+
+	regerror(err, &regex, buff, sizeof(buff));
+	fprintf(stderr, "error in filter pattern: %s\n", buff);
+	exit(1);
+}
+
+// regex matching
+static
+int match_regex(const _test_rec* const rec)
+{
+	return regexec(&regex, rec->name, 0, NULL, 0) == 0;
+}
+
+// regex compilation
+static
+void compile_regex(const char* const re)
+{
+	int err = regcomp(&regex, re, REG_NOSUB | REG_EXTENDED);
+
+	if(err)
+		exit_with_regex_error(err);
+
+	atexit(free_regex);
+	accept_case = match_regex;
+}
+
+// parameter parsing
+static
+void parse_params(int argc, char** argv)
+{
+	int re_compiled = 0;
+
+	for(int i = 1; i < argc; ++i)
+	{
+		if(strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
+			usage_exit(argv[0]);
+
+		if(strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--all") == 0)
+		{
+			_failed = do_nothing;
+			continue;
+		}
+
+		if(strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--filter") == 0)
+		{
+			if(re_compiled)
+			{
+				fputs("error: only one filter may be given\n\n", stderr);
+				usage_exit(argv[0]);
+			}
+
+			// compile regex
+			if(++i == argc)
+			{
+				fputs("error: missing regular expression pattern\n\n", stderr);
+				usage_exit(argv[0]);
+			}
+
+			compile_regex(argv[i]);
+			re_compiled = 1;
+			continue;
+		}
+
+		fprintf(stderr, "error: unknown parameter \"%s\"\n\n", argv[i]);
+		usage_exit(argv[0]);
+	}
+}
+
+// entry point for the test binary
+int main(int argc, char** argv)
+{
+	parse_params(argc, argv);
+
 	if(!first)
 	{
-		fputs("No test to run.", stderr);
+		fputs("No test to run.\n", stderr);
 		return 1;
 	}
 
-	printf("Running %u test cases:\n", count);
-	flush_out();
+	unsigned count = 0;
 
 	for(const _test_rec* p = first; p; p = p->next)
 	{
+		if(!accept_case(p))
+			continue;
+
+		++count;
+
 		const clock_t ts = clock();
 
 		p->fn();
@@ -81,8 +203,8 @@ int main(void)
 		flush_out();
 	}
 
-	puts("All passed.");
+	printf("Done: %u test cases (%u failed).\n", count, num_failures);
 	flush_out();
 
-	return 0;
+	return num_failures > 0;
 }

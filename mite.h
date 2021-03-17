@@ -58,7 +58,8 @@ extern "C" {
 	if(!(cond))	\
 	{	\
 		fprintf(stderr, "FAILED: %s [%s:%u]: " fmt "\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__);	\
-		exit(1);	\
+		_failed();	\
+		return;	\
 	}	\
 })
 
@@ -84,6 +85,8 @@ typedef struct _test_rec
 } _test_rec;
 
 void _register_test(_test_rec*) __attribute__((nonnull));
+
+extern void (*_failed)(void);
 
 #ifdef __cplusplus
 }
