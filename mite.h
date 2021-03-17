@@ -69,22 +69,22 @@ extern "C" {
 	static void name(void);	\
 	static __attribute__((constructor)) void _cons_ ## name(void)	\
 	{	\
-		static _test_rec rec = { __FILE__, __LINE__, #name, name, NULL };	\
+		static _test_case rec = { __FILE__, __LINE__, #name, name, NULL };	\
 		_register_test(&rec);	\
 	}	\
 	static void name(void)
 
 // implementation
-typedef struct _test_rec
+typedef struct _test_case
 {
 	const char* const file_name;
 	const int line;
 	const char* const name;
 	void (*fn)(void);
-	struct _test_rec* next;
-} _test_rec;
+	struct _test_case* next;
+} _test_case;
 
-void _register_test(_test_rec*) __attribute__((nonnull));
+void _register_test(_test_case*) __attribute__((nonnull));
 
 extern void (*_failed)(void);
 

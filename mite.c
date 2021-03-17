@@ -37,9 +37,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <regex.h>
 
-static _test_rec *first = NULL, *last = NULL;
+static _test_case *first = NULL, *last = NULL;
 
-void _register_test(_test_rec* rec)
+void _register_test(_test_case* rec)
 {
 	rec->next = NULL;
 
@@ -88,9 +88,9 @@ void usage_exit(const char* prog_name)
 }
 
 // filter test cases
-static int all_pass(const _test_rec* const rec __attribute__((unused)))	{ return 1; }
+static int all_pass(const _test_case* const rec __attribute__((unused)))	{ return 1; }
 
-static int (*accept_case)(const _test_rec* const) = all_pass;
+static int (*accept_test_case)(const _test_case* const) = all_pass;
 
 // regex
 static regex_t regex;
@@ -113,7 +113,7 @@ void exit_with_regex_error(int err)
 
 // regex matching
 static
-int match_regex(const _test_rec* const rec)
+int match_regex(const _test_case* const rec)
 {
 	return regexec(&regex, rec->name, 0, NULL, 0) == 0;
 }
@@ -128,12 +128,12 @@ void compile_regex(const char* const re)
 		exit_with_regex_error(err);
 
 	atexit(free_regex);
-	accept_case = match_regex;
+	accept_test_case = match_regex;
 }
 
-// parameter parsing
+// option parsing
 static
-void parse_params(int argc, char** argv)
+void parse_options(int argc, char** argv)
 {
 	int re_compiled = 0;
 
@@ -156,7 +156,6 @@ void parse_params(int argc, char** argv)
 				usage_exit(argv[0]);
 			}
 
-			// compile regex
 			if(++i == argc)
 			{
 				fputs("error: missing regular expression pattern\n\n", stderr);
@@ -176,7 +175,7 @@ void parse_params(int argc, char** argv)
 // entry point for the test binary
 int main(int argc, char** argv)
 {
-	parse_params(argc, argv);
+	parse_options(argc, argv);
 
 	if(!first)
 	{
@@ -186,9 +185,9 @@ int main(int argc, char** argv)
 
 	unsigned count = 0;
 
-	for(const _test_rec* p = first; p; p = p->next)
+	for(const _test_case* p = first; p; p = p->next)
 	{
-		if(!accept_case(p))
+		if(!accept_test_case(p))
 			continue;
 
 		++count;
