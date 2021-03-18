@@ -172,6 +172,13 @@ void parse_options(int argc, char** argv)
 	}
 }
 
+// timing
+static inline
+double time_since(const clock_t start)
+{
+	return ((double)(clock() - start)) / CLOCKS_PER_SEC;
+}
+
 // entry point for the test binary
 int main(int argc, char** argv)
 {
@@ -184,6 +191,7 @@ int main(int argc, char** argv)
 	}
 
 	unsigned count = 0;
+	const clock_t start = clock();
 
 	for(const _test_case* p = first; p; p = p->next)
 	{
@@ -197,12 +205,12 @@ int main(int argc, char** argv)
 		p->fn();
 
 		printf("passed: %s [%s] in %fs\n",
-			   p->name, p->file_name, ((double)(clock() - ts)) / CLOCKS_PER_SEC);
+			   p->name, p->file_name, time_since(ts));
 
 		flush_out();
 	}
 
-	printf("Done: %u test cases (%u failed).\n", count, num_failures);
+	printf("Done: %u test cases (%u failed) in %fs.\n", count, num_failures, time_since(start));
 	flush_out();
 
 	return num_failures > 0;
