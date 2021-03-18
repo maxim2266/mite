@@ -69,7 +69,7 @@ extern "C" {
 	static void name(void);	\
 	static __attribute__((constructor)) void _cons_ ## name(void)	\
 	{	\
-		static _test_case rec = { __FILE__, __LINE__, #name, name, NULL };	\
+		static _test_case rec = { name, #name, __FILE__, NULL };	\
 		_register_test(&rec);	\
 	}	\
 	static void name(void)
@@ -77,10 +77,8 @@ extern "C" {
 // implementation
 typedef struct _test_case
 {
-	const char* const file_name;
-	const int line;
-	const char* const name;
 	void (*fn)(void);
+	const char *name, *file_name;
 	struct _test_case* next;
 } _test_case;
 
