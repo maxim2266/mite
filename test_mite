@@ -1,6 +1,6 @@
 #!/bin/sh
 
-BIN="$(basename $0)_binary"
+BIN="$(basename "$0")_binary"
 
 gcc -s -O2 -Wall -Wextra -o "$BIN" mite.c test_1.c test_2.c && "./$BIN" "$@"
 ret=$?
