@@ -37,6 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sys/types.h>
 #include <regex.h>
 
+// test case registration
 static _test_case *first = NULL, *last = NULL;
 
 void _register_test(_test_case* rec)
@@ -49,43 +50,13 @@ void _register_test(_test_case* rec)
 		last = last->next = rec;
 }
 
-static
-void flush_out(void)
-{
-	if(fflush(stdout) == EOF)
-	{
-		perror("error writing to STDOUT");
-		exit(2);
-	}
-}
-
-// termination fucntions
+// termination functions
 static unsigned num_failures = 0;
 
 static void do_exit(void) 		{ exit(1); }
 static void do_nothing(void)	{ ++num_failures; }
 
 void (*_failed)(void) = do_exit;
-
-// show usage string
-static __attribute__((noreturn))
-void usage_exit(const char* prog_name)
-{
-	const char* const s = strrchr(prog_name, '/');
-
-	if(s)
-		prog_name = s + 1;
-
-	fprintf(stderr,
-			"Usage: %s [OPTION]...\n\n"
-			"Options:\n"
-			"  -a, --all              do not stop at the first failed test\n"
-			"  -f, --filter PATTERN   run only the tests matching the given\n"
-			"                         regular expression PATTERN\n"
-			"  -h, --help             show this message and exit\n",
-		    prog_name);
-	exit(2);
-}
 
 // filter test cases
 static int all_pass(const _test_case* const rec __attribute__((unused)))	{ return 1; }
@@ -102,7 +73,7 @@ void free_regex(void)
 }
 
 static __attribute__((noreturn))
-void exit_with_regex_error(int err)
+void exit_with_regex_error(const int err)
 {
 	char buff[4096];
 
@@ -122,7 +93,7 @@ int match_regex(const _test_case* const rec)
 static
 void compile_regex(const char* const re)
 {
-	int err = regcomp(&regex, re, REG_NOSUB | REG_EXTENDED);
+	const int err = regcomp(&regex, re, REG_NOSUB | REG_EXTENDED);
 
 	if(err)
 		exit_with_regex_error(err);
@@ -131,44 +102,68 @@ void compile_regex(const char* const re)
 	accept_test_case = match_regex;
 }
 
+// show usage string
+static __attribute__((noreturn))
+void usage_exit(const char* prog_name)
+{
+	const char* const s = strrchr(prog_name, '/');
+
+	if(s)
+		prog_name = s + 1;
+
+	fprintf(stderr,
+			"Usage: %s [OPTION]...\n\n"
+			"Options:\n"
+			"  -a, --all              do not stop at the first failed test\n"
+			"  -f, --filter PATTERN   run only the tests matching the given\n"
+			"                         regular expression PATTERN\n"
+			"  -h, --help             show this message and exit\n",
+		    prog_name);
+
+	exit(2);
+}
+
 // option parsing
 static
-void parse_options(int argc, char** argv)
+void parse_options(const char** argv)
 {
-	int re_compiled = 0;
+	const char* const prog_name = *argv++;
+	int got_filter = 0;
 
-	for(int i = 1; i < argc; ++i)
+	while(*argv)
 	{
-		if(strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
-			usage_exit(argv[0]);
+		const char* arg = *argv++;
 
-		if(strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--all") == 0)
+		if(strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0)
+			usage_exit(prog_name);
+
+		if(strcmp(arg, "-a") == 0 || strcmp(arg, "--all") == 0)
 		{
 			_failed = do_nothing;
 			continue;
 		}
 
-		if(strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--filter") == 0)
+		if(strcmp(arg, "-f") == 0 || strcmp(arg, "--filter") == 0)
 		{
-			if(re_compiled)
+			if(got_filter)
 			{
 				fputs("error: only one filter may be given\n\n", stderr);
-				usage_exit(argv[0]);
+				usage_exit(prog_name);
 			}
 
-			if(++i == argc)
+			if(!(arg = *argv++))
 			{
-				fputs("error: missing regular expression pattern\n\n", stderr);
-				usage_exit(argv[0]);
+				fputs("error: missing filter pattern\n\n", stderr);
+				usage_exit(prog_name);
 			}
 
-			compile_regex(argv[i]);
-			re_compiled = 1;
+			compile_regex(arg);
+			got_filter = 1;
 			continue;
 		}
 
-		fprintf(stderr, "error: unknown parameter \"%s\"\n\n", argv[i]);
-		usage_exit(argv[0]);
+		fprintf(stderr, "error: unknown parameter \"%s\"\n\n", arg);
+		usage_exit(prog_name);
 	}
 }
 
@@ -179,10 +174,21 @@ double time_since(const clock_t start)
 	return ((double)(clock() - start)) / CLOCKS_PER_SEC;
 }
 
-// entry point for the test binary
-int main(int argc, char** argv)
+// flush STDOUT
+static
+void flush_out(void)
 {
-	parse_options(argc, argv);
+	if(fflush(stdout) == EOF)
+	{
+		perror("error writing to STDOUT");
+		exit(2);
+	}
+}
+
+// entry point for the test binary
+int main(int argc __attribute__((unused)), const char* argv[])
+{
+	parse_options(argv);
 
 	if(!first)
 	{
@@ -203,10 +209,7 @@ int main(int argc, char** argv)
 		const clock_t ts = clock();
 
 		p->fn();
-
-		printf("passed: %s [%s] in %fs\n",
-			   p->name, p->file_name, time_since(ts));
-
+		printf("passed: %s [%s] in %fs\n", p->name, p->file_name, time_since(ts));
 		flush_out();
 	}
 
