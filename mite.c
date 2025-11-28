@@ -38,9 +38,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <regex.h>
 
 // test case registration
-static _test_case *first = NULL, *last = NULL;
+static mite_test_case *first = NULL, *last = NULL;
 
-void _register_test(_test_case* rec)
+void mite_register_test(mite_test_case* rec)
 {
 	rec->next = NULL;
 
@@ -56,12 +56,12 @@ static unsigned num_failures = 0;
 static void do_exit(void) 		{ exit(1); }
 static void do_nothing(void)	{ ++num_failures; }
 
-void (*_failed)(void) = do_exit;
+void (*mite_failed)(void) = do_exit;
 
 // filter test cases
-static int all_pass(const _test_case* const rec __attribute__((unused)))	{ return 1; }
+static int all_pass(const mite_test_case* const rec __attribute__((unused)))	{ return 1; }
 
-static int (*accept_test_case)(const _test_case* const) = all_pass;
+static int (*accept_test_case)(const mite_test_case* const) = all_pass;
 
 // regex
 static regex_t regex;
@@ -84,7 +84,7 @@ void exit_with_regex_error(const int err)
 
 // regex matching
 static
-int match_regex(const _test_case* const rec)
+int match_regex(const mite_test_case* const rec)
 {
 	return regexec(&regex, rec->name, 0, NULL, 0) == 0;
 }
@@ -139,7 +139,7 @@ void parse_options(const char** argv)
 
 		if(strcmp(arg, "-a") == 0 || strcmp(arg, "--all") == 0)
 		{
-			_failed = do_nothing;
+			mite_failed = do_nothing;
 			continue;
 		}
 
@@ -199,7 +199,7 @@ int main(int argc __attribute__((unused)), const char* argv[])
 	unsigned count = 0;
 	const clock_t start = clock();
 
-	for(const _test_case* p = first; p; p = p->next)
+	for(const mite_test_case* p = first; p; p = p->next)
 	{
 		if(!accept_test_case(p))
 			continue;

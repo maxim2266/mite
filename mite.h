@@ -58,7 +58,7 @@ extern "C" {
 	if(!(cond))	\
 	{	\
 		fprintf(stderr, "FAILED: %s [%s:%u]: " fmt "\n", __func__, __FILE__, __LINE__, ##__VA_ARGS__);	\
-		_failed();	\
+		mite_failed();	\
 		return;	\
 	}	\
 })
@@ -69,22 +69,22 @@ extern "C" {
 	static void name(void);	\
 	static __attribute__((constructor)) void _cons_ ## name(void)	\
 	{	\
-		static _test_case rec = { name, #name, __FILE__, NULL };	\
-		_register_test(&rec);	\
+		static mite_test_case rec = { name, #name, __FILE__, NULL };	\
+		mite_register_test(&rec);	\
 	}	\
 	static void name(void)
 
 // implementation
-typedef struct _test_case
+typedef struct mite_test_case
 {
 	void (*fn)(void);
 	const char *name, *file_name;
-	struct _test_case* next;
-} _test_case;
+	struct mite_test_case* next;
+} mite_test_case;
 
-void _register_test(_test_case*) __attribute__((nonnull));
+void mite_register_test(mite_test_case*) __attribute__((nonnull));
 
-extern void (*_failed)(void);
+extern void (*mite_failed)(void);
 
 #ifdef __cplusplus
 }
